@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -13,24 +13,25 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  int temprature = 0;
-  String location = 'Jakarta';
+  int temperature = 0;
+  String location = "Jakarta";
   int woeid = 1047378;
-  String weather = 'clear';
-
-  String abbreviation = 'c';
 
   String errorMessage = '';
 
-  var minTemperature = List.filled(7, 0);
-  var maxTemperature = List.filled(7, 0);
+  String weather = "clear";
 
-  var abbreviationForcast = List.filled(7, 'c');
+  String abbreviation = 'c';
+
+  var minTemp = List.filled(7, 0);
+  var maxTemp = List.filled(7, 0);
+
+  var abbreviationForecast = List.filled(7, 'c');
 
   String searchApiUrl =
-      'https://www.metaweather.com/api/location/search/?query=';
+      "https://www.metaweather.com/api/location/search/?query=";
 
-  String locationApiUrl = 'https://www.metaweather.com/api/location/';
+  String locationApiUrl = "https://www.metaweather.com/api/location/";
 
   @override
   void initState() {
@@ -45,26 +46,25 @@ class _HomeState extends State<Home> {
       var result = jsonDecode(searchResult.body)[0];
 
       setState(() {
-        location = result['title'];
-        woeid = result['woeid'];
-        errorMessage = '';
+        location = result["title"];
+        woeid = result["woeid"];
       });
-    } catch (error) {
+    } catch (e) {
       setState(() {
-        errorMessage = 'Lokasi tidak ditemukan,\n silahkan cari kota lainnya';
+        errorMessage = "Location not found";
       });
     }
   }
 
-  void fetchLocation() async {
+  Future<void> fetchLocation() async {
     var locationResult =
-        await http.get(Uri.parse(locationApiUrl + woeid.toString()));
+    await http.get(Uri.parse(locationApiUrl + woeid.toString()));
     var result = jsonDecode(locationResult.body);
-    var consolidatedWeather = result['consolidated_weather'];
+    var consolidatedWeather = result["consolidated_weather"];
     var data = consolidatedWeather[0];
 
     setState(() {
-      temprature = data['the_temp'].round();
+      temperature = data['the_temp'].round();
       weather = data['weather_state_name'].replaceAll(' ', '').toLowerCase();
       abbreviation = data['weather_state_abbr'];
     });
@@ -76,16 +76,15 @@ class _HomeState extends State<Home> {
       var locationDayResult = await http.get(Uri.parse(locationApiUrl +
           woeid.toString() +
           '/' +
-          DateFormat('y/M/d')
-              .format(today.add(Duration(days: i + 1)))
-              .toString()));
+          DateFormat('y/M/d').format(today.add(Duration(days: i + 1)))));
+
       var result = json.decode(locationDayResult.body);
       var data = result[0];
 
       setState(() {
-        minTemperature[i] = data['min_temp'].round();
-        maxTemperature[i] = data['max_temp'].round();
-        abbreviationForcast[i] = data['weather_state_abbr'];
+        minTemp[i] = data['min_temp'].round();
+        maxTemp[i] = data['max_temp'].round();
+        abbreviationForecast[i] = data['weather_state_abbr'];
       });
     }
   }
@@ -101,142 +100,133 @@ class _HomeState extends State<Home> {
     return Container(
       decoration: BoxDecoration(
           image: DecorationImage(
-              image: AssetImage('images/$weather.png'),
+              image: AssetImage("images/$weather.png"),
               fit: BoxFit.cover,
               colorFilter: ColorFilter.mode(
-                  Colors.black.withOpacity(0.6), BlendMode.dstATop))),
-      child: temprature == null
+                  Colors.black.withOpacity(0.4), BlendMode.dstATop
+              )
+          )
+      ),
+      child: temperature == null
           ? const Center(
-              child: CircularProgressIndicator(),
-            )
+        child: CircularProgressIndicator(),
+      )
           : Scaffold(
-              resizeToAvoidBottomInset: false,
-              backgroundColor: Colors.transparent,
-              body: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.center,
+        resizeToAvoidBottomInset: false,
+        backgroundColor: Colors.transparent,
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Column(
+              children: [
+                Center(
+                  child: Image.network(
+                    'https://www.metaweather.com/static/img/weather/png/$abbreviation.png',
+                    width: 100,
+                  ),
+                ),
+                Center(
+                  child: Text(
+                      temperature.toString() + " ˚C",
+                      style: const TextStyle(
+                          fontSize: 60, color: Colors.white)),
+                ),
+                Center(
+                  child: Text(
+                    location,
+                    style: const TextStyle(
+                        fontSize: 40, color: Colors.white),
+                  ),
+                )
+              ],
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  Column(
-                    children: [
-                      Center(
-                        child: Image.network(
-                          'https://www.metaweather.com/static/img/weather/png/$abbreviation.png',
-                          width: 100,
-                        ),
-                      ),
-                      Center(
-                        child: Text(
-                          temprature.toString() + '˚ C',
-                          style: const TextStyle(
-                              fontSize: 60, color: Colors.white),
-                        ),
-                      ),
-                      Center(
-                        child: Text(
-                          location,
-                          style: const TextStyle(
-                              fontSize: 40, color: Colors.white),
-                        ),
-                      )
-                    ],
-                  ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        forecastElement(1, abbreviationForcast[1],
-                            maxTemperature[1], minTemperature[1]),
-                        forecastElement(2, abbreviationForcast[2],
-                            maxTemperature[2], minTemperature[2]),
-                        forecastElement(3, abbreviationForcast[3],
-                            maxTemperature[3], minTemperature[3]),
-                        forecastElement(4, abbreviationForcast[4],
-                            maxTemperature[4], minTemperature[4]),
-                        forecastElement(5, abbreviationForcast[5],
-                            maxTemperature[5], minTemperature[5]),
-                        forecastElement(6, abbreviationForcast[6],
-                            maxTemperature[6], minTemperature[6]),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      SizedBox(
-                        width: 300,
-                        child: TextField(
-                          onSubmitted: (String input) {
-                            onTextFieldSubmitted(input);
-                          },
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 25),
-                          decoration: const InputDecoration(
-                            hintText: 'Search Another Location...',
-                            hintStyle:
-                                TextStyle(color: Colors.white, fontSize: 16),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          errorMessage,
-                          style: TextStyle(
-                              color: Colors.redAccent,
-                              fontSize: Platform.isAndroid ? 15 : 20,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      )
-                    ],
-                  ),
+                  forecastElement(1, abbreviationForecast[1], maxTemp[1], minTemp[1]),
+                  forecastElement(2, abbreviationForecast[2], maxTemp[2], minTemp[2]),
+                  forecastElement(3, abbreviationForecast[3], maxTemp[3], minTemp[3]),
+                  forecastElement(4, abbreviationForecast[4], maxTemp[4], minTemp[4]),
+                  forecastElement(5, abbreviationForecast[5], maxTemp[5], minTemp[5]),
+                  forecastElement(6, abbreviationForecast[6], maxTemp[6], minTemp[6]),
                 ],
               ),
             ),
+            Column(
+              children: [
+                SizedBox(
+                  width: 300,
+                  child: TextField(
+                    onSubmitted: (String input) {
+                      errorMessage = '';
+                      onTextFieldSubmitted(input.toLowerCase());
+                    },
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 25),
+                    decoration: const InputDecoration(
+                        hintText: 'Search Location...',
+                        hintStyle:
+                        TextStyle(color: Colors.white, fontSize: 16),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Colors.white,
+                        )),
+                  ),
+                ),
+                Text(errorMessage,
+                    style: TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: Platform.isAndroid ? 15 : 20))
+              ],
+            )
+          ],
+        ),
+      ),
     );
   }
 }
 
-Widget forecastElement(
-    daysFromNow, abbreviation, maxTemprature, minTemprature) {
+Widget forecastElement(daysFromNow, abbr, maxTemp, minTemp) {
   var now = DateTime.now();
   var oneDayFromNow = now.add(Duration(days: daysFromNow));
 
   return Padding(
-    padding: const EdgeInsets.only(left: 16),
+    padding: const EdgeInsets.only(left: 12),
     child: Container(
       decoration: BoxDecoration(
-          color: Color.fromRGBO(205, 212, 228, 0.2),
-          borderRadius: BorderRadius.circular(10.0)),
+          color: const Color.fromRGBO(205, 212, 228, 0.2),
+          borderRadius: BorderRadius.circular(10)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Text(
-              DateFormat.E().format(oneDayFromNow),
-              style: TextStyle(color: Colors.white, fontSize: 25),
-            ),
+            Text(DateFormat.E().format(oneDayFromNow),
+                style: const TextStyle(color: Colors.white, fontSize: 25)),
             Text(
               DateFormat.MMMd().format(oneDayFromNow),
-              style: TextStyle(color: Colors.white, fontSize: 20),
+              style: const TextStyle(color: Colors.white, fontSize: 20),
             ),
             Padding(
               padding: const EdgeInsets.only(top: 16, bottom: 16),
               child: Image.network(
-                'https://www.metaweather.com/static/img/weather/png/$abbreviation.png',
+                'https://www.metaweather.com/static/img/weather/png/$abbr.png',
                 width: 50,
               ),
             ),
             Text(
-              'High: ' + maxTemprature.toString() + '˚ C',
-              style: const TextStyle(fontSize: 16, color: Colors.white),
+                "High: " + maxTemp.toString() + " ˚C",
+                style: const TextStyle(
+                    fontSize: 15, color: Colors.white
+                )
             ),
             Text(
-              'Low: ' + minTemprature.toString() + '˚ C',
-              style: const TextStyle(fontSize: 16, color: Colors.white),
-            ),
+                "Low: " + minTemp.toString() + " ˚C",
+                style: const TextStyle(
+                    fontSize: 15, color: Colors.white
+                )
+            )
           ],
         ),
       ),
